@@ -109,6 +109,16 @@ int add_alpha(unsigned char *src_ptr, unsigned char *dst_ptr, int rows, int cols
 	return 0;
 }
 
+int rgb888_to_rgb565(unsigned char *src_ptr, unsigned char *dst_ptr, int rows, int cols)
+{
+    cv::Mat src(cv::Size(cols, rows), CV_8UC3, src_ptr);
+    cv::Mat dst = cv::Mat(src.rows, src.cols, CV_16UC1);
+    cv::cvtColor(src, dst, cv::COLOR_BGRA2BGR565);
+    
+    memcpy(dst_ptr, dst.data, dst.elemSize1() * dst.cols * dst.rows * dst.channels());
+	return 0;
+}
+
 int gen_copy_img(unsigned char *src_ptr, unsigned char *dst_ptr, int rows, int cols, int final_rows, int final_cols)
 {
     cv::Mat src(cv::Size(cols, rows), CV_8UC3, src_ptr);
