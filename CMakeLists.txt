@@ -32,6 +32,8 @@ include_directories(
 add_library(imageprocess
         src/image_process.cpp)
 
+add_library(write2fb
+        src/cp_framebuffer.cpp)
 
 add_executable(${PROJECT_NAME} src/zntk_offset_fb.cpp)
 
@@ -43,6 +45,7 @@ link_directories(${LINK_DIR})
 target_link_libraries(${PROJECT_NAME}
   PRIVATE
   imageprocess
+  write2fb
   ${OpenCV_LIBS} 
   ${CMAKE_THREAD_LIBS_INIT}
   libjibian.so

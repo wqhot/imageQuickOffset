@@ -3,6 +3,7 @@
 #include <opencv2/highgui.hpp>
 #include <opencv2/imgproc.hpp>
 #include <iostream>
+#include <defines.h>
 
 struct object_rect {
     int x;
@@ -68,19 +69,58 @@ int resize_uniform(cv::Mat &src, cv::Mat &dst, cv::Size dst_size, object_rect &e
     return 0;
 }
 
-void get_image_data(unsigned char *img_data)
+void get_image_data(unsigned char *img_ptr)
 {
     cv::Mat image = cv::imread("2.png");
     cv::Mat dst;
 
     object_rect res_area;
-    (void)resize_uniform(image, dst, cv::Size(1920, 720), res_area);
-    memcpy(img_data, dst.data, dst.cols * dst.rows * dst.channels());
+    (void)resize_uniform(image, dst, cv::Size(BEFORE_TRANS_COLS, BEFORE_TRANS_ROWS), res_area);
+    memcpy(img_ptr, dst.data, dst.cols * dst.rows * dst.channels());
 }
 
-void show_image_data(unsigned char *img_data, int rows, int cols)
+void show_image_data(unsigned char *img_ptr, int rows, int cols)
 {
-    cv::Mat image(cv::Size(cols, rows), CV_8UC3, img_data);
+    cv::Mat image(cv::Size(cols, rows), CV_8UC3, img_ptr);
     cv::imshow("bbb", image);
     cv::waitKey(0);
+}
+
+int add_alpha(unsigned char *src_ptr, unsigned char *dst_ptr, int rows, int cols)
+{
+	cv::Mat src(cv::Size(cols, rows), CV_8UC3, src_ptr);
+    cv::Mat alpha(cv::Size(cols, rows), CV_8UC1, cv::Scalar(0));
+	// cv::Mat alpha = cv::Mat::ones(src.rows, src.cols, CV_8UC1);
+	cv::Mat dst = cv::Mat(src.rows, src.cols, CV_8UC4);
+ 
+	std::vector<cv::Mat> src_channels;
+	std::vector<cv::Mat> dst_channels;
+	//分离通道
+	cv::split(src, src_channels);
+ 
+	dst_channels.push_back(src_channels[0]);
+	dst_channels.push_back(src_channels[1]);
+	dst_channels.push_back(src_channels[2]);
+	//添加透明度通道
+	dst_channels.push_back(alpha);
+	//合并通道
+	cv::merge(dst_channels, dst);
+    memcpy(dst_ptr, dst.data, dst.cols * dst.rows * dst.channels());
+	return 0;
+}
+
+int gen_copy_img(unsigned char *src_ptr, unsigned char *dst_ptr, int rows, int cols, int final_rows, int final_cols)
+{
+    cv::Mat src(cv::Size(cols, rows), CV_8UC3, src_ptr);
+    cv::Mat src_90, src_270;   
+    cv::transpose(src, src_90); // 90度
+    cv::flip(src_90, src_270, cv::ROTATE_180); // 270度
+    cv::Mat dst(cv::Size(final_cols, final_rows), CV_8UC3);
+    // 左右模式拼接
+    cv::resize(src_90, src_90, cv::Size(int(final_cols / 2), final_rows));
+    cv::resize(src_270, src_270, cv::Size(int(final_cols / 2), final_rows));
+    src_270.copyTo(dst.colRange(0, int(final_cols / 2)));
+    src_90.copyTo(dst.colRange(int(final_cols / 2), final_cols));
+    memcpy(dst_ptr, dst.data, dst.cols * dst.rows * dst.channels());
+    return 0;
 }
