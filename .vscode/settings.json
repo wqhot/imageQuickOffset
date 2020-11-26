@@ -1,5 +1,5 @@
 {
-    "python.pythonPath": "C:\\Users\\wqhot\\anaconda3\\envs\\simnibs_env\\python.exe",
+    "python.pythonPath": "/home/wang/miniconda3/envs/zntk/bin/python",
     "files.associations": {
         "fstream": "cpp",
         "vector": "cpp",
@@ -40,6 +40,24 @@
         "xstddef": "cpp",
         "xstring": "cpp",
         "xtr1common": "cpp",
-        "xutility": "cpp"
+        "xutility": "cpp",
+        "cctype": "cpp",
+        "clocale": "cpp",
+        "cstdarg": "cpp",
+        "cwctype": "cpp",
+        "array": "cpp",
+        "*.tcc": "cpp",
+        "complex": "cpp",
+        "deque": "cpp",
+        "unordered_map": "cpp",
+        "algorithm": "cpp",
+        "functional": "cpp",
+        "memory_resource": "cpp",
+        "numeric": "cpp",
+        "optional": "cpp",
+        "random": "cpp",
+        "string": "cpp",
+        "string_view": "cpp",
+        "sstream": "cpp"
     }
 }
