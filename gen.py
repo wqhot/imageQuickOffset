@@ -1,8 +1,12 @@
 #!/usr/bin/env python
 # -*- coding:utf-8 -*-
 
+# g++ gen_c.cpp -fPIC -O0 -shared -o libjibian.so
+# cp libjibian.so /lib/x86_64-linux-gnu/
+
 import math
 import numpy as np
+from scipy.spatial import cKDTree
 import struct
 import progressbar
 
@@ -10,6 +14,12 @@ __FINAL_COL = 1920
 __FINAL_ROW = 1080
 __ORI_COL = 1920
 __ORI_ROW = 720
+
+def do_kdtree(combined_x_y_arrays,points):
+    mytree = cKDTree(combined_x_y_arrays)
+    dists, indexes = mytree.query(points)
+    return dists, indexes
+
 # offset_data = openpyxl.load_workbook('boundlessJDI.xlsx')
 
 mapping_table = [[[] for col in range(__FINAL_COL)] for row in range(__FINAL_ROW)]
@@ -33,15 +43,28 @@ ori_y_data = np.repeat(np.array(range(__ORI_ROW)).reshape((-1,1)), repeats=__ORI
 final_x_data = ori_x_data + offset_x_data
 final_y_data = ori_y_data + offset_y_data
 
-for row in range(__ORI_ROW):
-    for col in range(__ORI_COL):
-        z_col = int(round(final_x_data[row][col]) if round(final_x_data[row][col]) < __FINAL_COL else __FINAL_COL - 1)
-        z_row = int(round(final_y_data[row][col]) if round(final_y_data[row][col]) < __FINAL_ROW else __FINAL_ROW - 1)
-        distance_x = final_x_data[row][col] - z_col
-        distance_y = final_y_data[row][col] - z_row
-        distance = math.sqrt(distance_x * distance_x + distance_y * distance_y)
-        mapping_table[z_row][z_col].append([row, col])
-        distance_table[z_row][z_col].append(distance)
+final_x_data_f = final_x_data.flatten()
+final_y_data_f = final_y_data.flatten()
+combined_x_y_arrays = np.dstack([final_x_data_f,final_y_data_f])[0]
+
+final_x_pixel = np.repeat(np.array(range(__FINAL_COL)).reshape((1,-1)), repeats=__FINAL_ROW, axis=0)
+final_y_pixel = np.repeat(np.array(range(__FINAL_ROW)).reshape((-1,1)), repeats=__FINAL_COL, axis=1)
+combined_x_y_pixel = list(np.dstack([final_x_pixel.ravel(),final_y_pixel.ravel()])[0])
+
+dists, indexes = do_kdtree(combined_x_y_arrays,combined_x_y_pixel)
+
+succus_indexs = indexes[np.where(dists<math.sqrt(2.0))]
+succus_ori_row_col = np.unravel_index(succus_indexs, (__ORI_ROW, __ORI_COL))
+succes_final_row_col = np.unravel_index(np.where(dists<math.sqrt(2.0)), (__FINAL_ROW, __FINAL_COL))
+# for row in range(__ORI_ROW):
+#     for col in range(__ORI_COL):
+#         z_col = int(round(final_x_data[row][col]) if round(final_x_data[row][col]) < __FINAL_COL else __FINAL_COL - 1)
+#         z_row = int(round(final_y_data[row][col]) if round(final_y_data[row][col]) < __FINAL_ROW else __FINAL_ROW - 1)
+#         distance_x = final_x_data[row][col] - z_col
+#         distance_y = final_y_data[row][col] - z_row
+#         distance = math.sqrt(distance_x * distance_x + distance_y * distance_y)
+#         mapping_table[z_row][z_col].append([row, col])
+#         distance_table[z_row][z_col].append(distance)
 
 c_codes = []
 c_codes.append('#include <stdio.h>')
@@ -50,32 +73,39 @@ c_codes.append('int tran_img(unsigned char *res, unsigned char *dst)')
 c_codes.append('{')
 c_codes.append('    memset(dst, 0, ' + str(__FINAL_ROW * __FINAL_COL) + ');')
 save_bin = b''
-bar = progressbar.ProgressBar(0, __FINAL_ROW)
-bar.start()
 
-for row in range(__FINAL_ROW):
-    for col in range(__FINAL_COL):
-        if len(distance_table[row][col]) > 0:
-            sum_dis = sum(distance_table[row][col])
-            min_idx = np.argmin(np.array(distance_table[row][col]))
-            dst_idx = row * __FINAL_COL + col
-            formula = '    dst[' + str(dst_idx) + '] = '
-            res_idx = mapping_table[row][col][min_idx][0] * __ORI_COL + mapping_table[row][col][min_idx][1]
-            formula = formula + \
-                      'res[' + str(res_idx) + '];'
-            # save_bin = save_bin + struct.pack('i', dst_idx)
-            # save_bin = save_bin + struct.pack('i', res_idx)
-            # for idx in range(len(distance_table[row][col])): 
-            #     res_idx = mapping_table[row][col][idx][0] * __ORI_COL + mapping_table[row][col][idx][1]
-            #     weight = distance_table[row][col][idx] / sum_dis
-            #     formula = formula + \
-            #               ' + res[' + str(mapping_table[row][col][idx][0]) + ' * ' + str(__ORI_COL) + ' + ' + str(mapping_table[row][col][idx][1]) + '] * ' + \
-            #               str(distance_table[row][col][idx] / sum_dis)
-            #     save_bin = save_bin + struct.pack('i', dst_idx)
-            #     save_bin = save_bin + struct.pack('i', res_idx)
-            #     save_bin = save_bin + struct.pack('f', weight)
-            c_codes.append(formula)
-    bar.update(row)
+for idx in range(len(succes_final_row_col[0][0])):
+    dst_idx = succes_final_row_col[0][0][idx] * __FINAL_COL + succes_final_row_col[1][0][idx]
+    res_idx = succus_ori_row_col[0][idx] * __ORI_COL + succus_ori_row_col[1][idx]
+    formula = '    dst[' + str(dst_idx) + '] = res[' + str(res_idx) + '];'
+    c_codes.append(formula)
+
+# bar = progressbar.ProgressBar(0, __FINAL_ROW)
+# bar.start()
+
+# for row in range(__FINAL_ROW):
+#     for col in range(__FINAL_COL):
+#         if len(distance_table[row][col]) > 0:
+#             sum_dis = sum(distance_table[row][col])
+#             min_idx = np.argmin(np.array(distance_table[row][col]))
+#             dst_idx = row * __FINAL_COL + col
+#             formula = '    dst[' + str(dst_idx) + '] = '
+#             res_idx = mapping_table[row][col][min_idx][0] * __ORI_COL + mapping_table[row][col][min_idx][1]
+#             formula = formula + \
+#                       'res[' + str(res_idx) + '];'
+#             # save_bin = save_bin + struct.pack('i', dst_idx)
+#             # save_bin = save_bin + struct.pack('i', res_idx)
+#             # for idx in range(len(distance_table[row][col])): 
+#             #     res_idx = mapping_table[row][col][idx][0] * __ORI_COL + mapping_table[row][col][idx][1]
+#             #     weight = distance_table[row][col][idx] / sum_dis
+#             #     formula = formula + \
+#             #               ' + res[' + str(mapping_table[row][col][idx][0]) + ' * ' + str(__ORI_COL) + ' + ' + str(mapping_table[row][col][idx][1]) + '] * ' + \
+#             #               str(distance_table[row][col][idx] / sum_dis)
+#             #     save_bin = save_bin + struct.pack('i', dst_idx)
+#             #     save_bin = save_bin + struct.pack('i', res_idx)
+#             #     save_bin = save_bin + struct.pack('f', weight)
+#             c_codes.append(formula)
+#     bar.update(row)
 
 c_codes.append('}')
 
