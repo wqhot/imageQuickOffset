@@ -22,12 +22,12 @@ int main()
     gen_copy_img(new_image, show_image, AFTER_TRANS_ROWS, AFTER_TRANS_COLS, FINAL_ROWS, FINAL_COLS);
 
     tic.toc_print("trans");
-    show_image_data(show_image, FINAL_ROWS, FINAL_COLS);
+    // show_image_data(show_image, FINAL_ROWS, FINAL_COLS);
     init_framebuffer();
     tic.restart_toc();
     while (true)
     {
-        copy_image_to_framebuffer(new_image, FINAL_ROWS, FINAL_COLS);
+        copy_image_to_framebuffer(show_image, FINAL_ROWS, FINAL_COLS);
         std::cout << "reflash" << std::endl;
         usleep(10000);
     }
