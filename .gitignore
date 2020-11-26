@@ -128,3 +128,4 @@ dmypy.json
 # Pyre type checker
 .pyre/
 gen_c.cpp
+gen_py/trans.bin

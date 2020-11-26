@@ -71,14 +71,81 @@ c_codes.append('#include <stdio.h>')
 c_codes.append('#include <string.h>')
 c_codes.append('int tran_img(unsigned char *res, unsigned char *dst)')
 c_codes.append('{')
-c_codes.append('    memset(dst, 0, ' + str(__FINAL_ROW * __FINAL_COL) + ');')
+c_codes.append('    memset(dst, 0, ' + str(3 * __FINAL_ROW * __FINAL_COL) + ');')
 save_bin = b''
 
+dst_idxs = []
+res_idxs = []
 for idx in range(len(succes_final_row_col[0][0])):
-    dst_idx = succes_final_row_col[0][0][idx] * __FINAL_COL + succes_final_row_col[1][0][idx]
-    res_idx = succus_ori_row_col[0][idx] * __ORI_COL + succus_ori_row_col[1][idx]
-    formula = '    dst[' + str(dst_idx) + '] = res[' + str(res_idx) + '];'
+
+    dst_idx = (succes_final_row_col[0][0][idx] * __FINAL_COL + succes_final_row_col[1][0][idx])
+    res_idx = (succus_ori_row_col[0][idx] * __ORI_COL + succus_ori_row_col[1][idx])
+    dst_idxs.append(dst_idx)
+    res_idxs.append(res_idx)
+
+dst_idxs = np.array(dst_idxs)
+res_idxs = np.array(res_idxs)
+dst_idxs_moveon_1 = np.concatenate([dst_idxs[1:],np.array([0])], axis=0)
+res_idxs_moveon_1 = np.concatenate([res_idxs[1:],np.array([0])], axis=0)
+
+diff_dst = dst_idxs_moveon_1 - dst_idxs
+diff_res = res_idxs_moveon_1 - res_idxs
+
+diff_dst_not_1 = np.where(diff_dst != 1)[0]
+diff_res_not_1 = np.where(diff_res != 1)[0]
+
+dst_pos = 0
+res_pos = 0
+start_pos = 0
+end_pos = 0
+
+image_size = __FINAL_COL * __FINAL_ROW
+
+formula = '    dst[' + str(dst_idxs[0]) + '] = res[' + str(res_idxs[0]) + '];'
+c_codes.append(formula)
+formula = '    dst[' + str(dst_idxs[0]+1) + '] = res[' + str(res_idxs[0]+1) + '];'
+c_codes.append(formula)
+formula = '    dst[' + str(dst_idxs[0]+2) + '] = res[' + str(res_idxs[0]+2) + '];'
+c_codes.append(formula)
+
+while dst_pos <diff_dst_not_1.size or res_pos < diff_res_not_1.size:
+
+    # 查找最近的diff pos
+    if diff_dst_not_1[dst_pos] < diff_res_not_1[res_pos]:
+        end_pos = diff_dst_not_1[dst_pos]
+        dst_pos = dst_pos + 1
+    elif diff_dst_not_1[dst_pos] > diff_res_not_1[res_pos]:
+        end_pos = diff_res_not_1[res_pos]
+        res_pos = res_pos + 1
+    else:
+        end_pos = diff_dst_not_1[dst_pos]
+        dst_pos = dst_pos + 1
+        res_pos = res_pos + 1
+    
+    start_dst_idx = dst_idxs[start_pos]
+    start_res_idx = res_idxs[start_pos]
+    length = end_pos - start_pos
+    formula = '    memcpy(dst + ' + str(start_dst_idx * 3 + 3) + \
+              ', res + ' + str(start_res_idx * 3 + 3) + ', ' + str(3 * length) + ');'
     c_codes.append(formula)
+    # formula = '    memcpy(dst + ' + str(start_dst_idx + 1 + image_size) + \
+    #           ', res + ' + str(start_res_idx + 1 + image_size) + ',' + str(length) + ' );'
+    # c_codes.append(formula)
+    # formula = '    memcpy(dst + ' + str(start_dst_idx + 1 + 2 * image_size) + \
+    #           ', res + ' + str(start_res_idx + 1 + 2 * image_size) + ',' + str(length) + ' );'
+    c_codes.append(formula)
+    start_pos = end_pos
+
+
+
+    # formula = '    dst[' + str(dst_idx) + '] = res[' + str(res_idx) + '];'
+    # c_codes.append(formula)
+
+    # formula = '    dst[' + str(dst_idx + 1) + '] = res[' + str(res_idx + 1) + '];'
+    # c_codes.append(formula)
+
+    # formula = '    dst[' + str(dst_idx + 2) + '] = res[' + str(res_idx + 2) + '];'
+    # c_codes.append(formula)
 
 # bar = progressbar.ProgressBar(0, __FINAL_ROW)
 # bar.start()
