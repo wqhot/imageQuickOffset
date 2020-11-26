@@ -129,3 +129,4 @@ dmypy.json
 .pyre/
 gen_c.cpp
 gen_py/trans.bin
+gen_py/gen_offset_mat.cpp

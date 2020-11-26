@@ -48,7 +48,7 @@ target_link_libraries(${PROJECT_NAME}
   write2fb
   ${OpenCV_LIBS} 
   ${CMAKE_THREAD_LIBS_INIT}
-  libjibian.so
+  libjibianv2.so
 )
  
 

@@ -7,9 +7,11 @@ final_y = (offset_y + ori_y);
 final_xy = [final_x(:),final_y(:)];
 u_final_xy=unique(final_xy);
 % figure(1);
-scatter(final_xy(:,1), final_xy(:,2),'.');
+scatter(round(final_xy(:,1)), round(final_xy(:,2)),'.');
 grid on;
 axis equal;
+hold on;
+scatter((final_xy(:,1)), (final_xy(:,2)),'*');
 % plot(final_xy,'.');
 % hold on;
 % for i=1:720

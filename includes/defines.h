@@ -1,3 +1,4 @@
+#pragma once
 #define BEFORE_TRANS_COLS 1920
 #define BEFORE_TRANS_ROWS 720
 #define AFTER_TRANS_COLS 1920

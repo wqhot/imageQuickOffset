@@ -3,7 +3,12 @@
 #include <opencv2/highgui.hpp>
 #include <opencv2/imgproc.hpp>
 #include <iostream>
+#include <vector>
 #include <defines.h>
+#include <gen_c_v2.h>
+
+
+static std::vector<cv::Mat> remap_matrix;
 
 struct object_rect {
     int x;
@@ -69,6 +74,27 @@ int resize_uniform(cv::Mat &src, cv::Mat &dst, cv::Size dst_size, object_rect &e
     return 0;
 }
 
+int load_remap_mat(int rows, int cols)
+{
+    cv::Mat offset_matrix(cv::Size(cols, rows), CV_32FC2, offset_mat);
+    remap_matrix.clear();
+	//分离通道
+	cv::split(offset_matrix, remap_matrix);
+    std::cout << remap_matrix[0].rowRange(0, 4).colRange(0, 4) << std::endl;
+    std::cout << remap_matrix[1].rowRange(0, 4).colRange(0, 4) << std::endl;
+    return 0;
+}
+
+void trans_remap(unsigned char *src_ptr, unsigned char *dst_ptr, int rows, int cols, int final_rows, int final_cols)
+{
+    cv::Mat src(cv::Size(cols, rows), CV_8UC3, src_ptr);
+    cv::Mat src_extend(cv::Size(cols, rows + 1), CV_8UC3, cv::Scalar(0, 0, 0));
+    src.copyTo(src_extend.rowRange(0, rows));
+    cv::Mat dst(cv::Size(final_cols, final_rows), CV_8UC3);
+    cv::remap(src_extend, dst, remap_matrix[1], remap_matrix[0], cv::INTER_NEAREST);
+    memcpy(dst_ptr, dst.data, dst.cols * dst.rows * dst.channels());
+}
+
 void get_image_data(unsigned char *img_ptr)
 {
     cv::Mat image = cv::imread("2.png");
@@ -83,7 +109,14 @@ void show_image_data(unsigned char *img_ptr, int rows, int cols)
 {
     cv::Mat image(cv::Size(cols, rows), CV_8UC3, img_ptr);
     cv::imshow("bbb", image);
+    cv::imwrite("output.png", image);
     cv::waitKey(0);
+}
+
+void save_image_data(unsigned char *img_ptr, int rows, int cols)
+{
+    cv::Mat image(cv::Size(cols, rows), CV_8UC3, img_ptr);
+    cv::imwrite("output.png", image);
 }
 
 int add_alpha(unsigned char *src_ptr, unsigned char *dst_ptr, int rows, int cols)
