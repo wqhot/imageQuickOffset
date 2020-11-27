@@ -80,8 +80,6 @@ int load_remap_mat(int rows, int cols)
     remap_matrix.clear();
 	//分离通道
 	cv::split(offset_matrix, remap_matrix);
-    std::cout << remap_matrix[0].rowRange(0, 4).colRange(0, 4) << std::endl;
-    std::cout << remap_matrix[1].rowRange(0, 4).colRange(0, 4) << std::endl;
     return 0;
 }
 

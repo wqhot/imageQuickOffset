@@ -30,6 +30,7 @@ int main()
     // show_image_data(show_image, FINAL_ROWS, FINAL_COLS);
     init_framebuffer();
     tic.restart_toc();
+    copy_image_to_framebuffer(show_image, FINAL_ROWS, FINAL_COLS);
     // while (true)
     // {
     //     copy_image_to_framebuffer(show_image, FINAL_ROWS, FINAL_COLS);

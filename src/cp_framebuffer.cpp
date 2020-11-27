@@ -8,6 +8,7 @@
 #include <sys/ioctl.h>
 #include <arpa/inet.h>
 #include <image_process.h>
+#include <tic_toc.h>
 
 //14byte文件头
 typedef struct
@@ -128,7 +129,9 @@ int copy_image_to_framebuffer(unsigned char *image, int rows, int cols)
     {
         unsigned char *dst_ptr = new unsigned char[rows * cols * bits_per_pixel / 8];
         rgb888_to_rgb565(image, dst_ptr, rows, cols);
+        TicToc tic;
         memcpy(fbp, dst_ptr, rows * cols * bits_per_pixel / 8);
+        tic.toc_print("copy to screen");
         delete[] dst_ptr;
     }
 
