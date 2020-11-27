@@ -51,6 +51,7 @@ static char *fbp = 0;
 static int xres = 0;
 static int yres = 0;
 static int bits_per_pixel = 0;
+static int line_length = 0;
 static long int screensize = 0;
 static int fbfd = 0;
 
@@ -84,15 +85,20 @@ int init_framebuffer()
         exit(3);
     }
 
-    printf("R:%d,G:%d,B:%d \n", vinfo.red, vinfo.green, vinfo.blue);
+    printf("fb_info_t: red(%d %d) green(%d %d) blue(%d %d)\n", vinfo.red.offset, vinfo.red.length,
+            vinfo.green.offset, vinfo.green.length, vinfo.blue.offset, vinfo.blue.length);
+    printf("xoffset:%d, yoffset:%d \n",vinfo.xoffset,vinfo.yoffset); 
     printf("%dx%d, %dbpp\n", vinfo.xres, vinfo.yres, vinfo.bits_per_pixel);
+    printf("line_length=%d\n", finfo.line_length);
+
 
     xres = vinfo.xres;
     yres = vinfo.yres;
     bits_per_pixel = vinfo.bits_per_pixel;
+    line_length = finfo.line_length * 8 / bits_per_pixel;
 
     //计算屏幕的总大小（字节）
-    screensize = vinfo.xres * vinfo.yres * vinfo.bits_per_pixel / 8;
+    screensize = line_length * vinfo.yres * vinfo.bits_per_pixel / 8;
     printf("screensize=%d byte\n", screensize);
 
     //对象映射
@@ -115,25 +121,31 @@ int close_framebuffer()
 }
 
 int copy_image_to_framebuffer(unsigned char *image, int rows, int cols)
-{
-    
+{  
+    unsigned char *dst_ptr = new unsigned char[rows * cols * bits_per_pixel / 8];
+    TicToc tic;
     if (bits_per_pixel == 32)
     {
         // 增加透明度
-        unsigned char *dst_ptr = new unsigned char[rows * cols * bits_per_pixel / 8];
-        add_alpha(image, dst_ptr, rows, cols);
-        memcpy(fbp, dst_ptr, rows * cols * bits_per_pixel / 8);
-        delete[] dst_ptr;
+        add_alpha(image, dst_ptr, rows, cols);  
+        // gen_test_image(dst_ptr, rows, cols); 
+        std::cout << "gen_test_image" << std::endl; 
     }
     else if (bits_per_pixel == 16)
     {
-        unsigned char *dst_ptr = new unsigned char[rows * cols * bits_per_pixel / 8];
-        rgb888_to_rgb565(image, dst_ptr, rows, cols);
-        TicToc tic;
-        memcpy(fbp, dst_ptr, rows * cols * bits_per_pixel / 8);
-        tic.toc_print("copy to screen");
-        delete[] dst_ptr;
+        rgb888_to_rgb565(image, dst_ptr, rows, cols);    
     }
+    int max_cols = cols < xres ? cols : xres;
+    int max_rows = rows < yres ? rows : yres;
+    for (int i = 0; i < max_rows; ++i)
+    {
+        size_t start_pos_screen = (line_length * i) * bits_per_pixel / 8;
+        size_t start_pos_image = (cols * i) * bits_per_pixel / 8;
+        memcpy(fbp + start_pos_screen, dst_ptr + start_pos_image, max_cols * bits_per_pixel / 8);
+    }
+    // memcpy(fbp, dst_ptr, rows * cols * bits_per_pixel / 8);
+    delete[] dst_ptr;
+    tic.toc_print("copy to screen");
 
     return 0;
 }

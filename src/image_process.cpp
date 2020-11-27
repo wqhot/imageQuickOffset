@@ -120,7 +120,7 @@ void save_image_data(unsigned char *img_ptr, int rows, int cols)
 int add_alpha(unsigned char *src_ptr, unsigned char *dst_ptr, int rows, int cols)
 {
 	cv::Mat src(cv::Size(cols, rows), CV_8UC3, src_ptr);
-    cv::Mat alpha(cv::Size(cols, rows), CV_8UC1, cv::Scalar(0));
+    cv::Mat alpha(cv::Size(cols, rows), CV_8UC1, cv::Scalar(255));
 	// cv::Mat alpha = cv::Mat::ones(src.rows, src.cols, CV_8UC1);
 	cv::Mat dst = cv::Mat(src.rows, src.cols, CV_8UC4);
  
@@ -136,7 +136,8 @@ int add_alpha(unsigned char *src_ptr, unsigned char *dst_ptr, int rows, int cols
 	dst_channels.push_back(alpha);
 	//合并通道
 	cv::merge(dst_channels, dst);
-    memcpy(dst_ptr, dst.data, dst.cols * dst.rows * dst.channels());
+    memcpy(dst_ptr, dst.data, dst.elemSize1() * dst.cols * dst.rows * dst.channels());
+    cv::imwrite("alpha.png", dst);
 	return 0;
 }
 
@@ -150,6 +151,16 @@ int rgb888_to_rgb565(unsigned char *src_ptr, unsigned char *dst_ptr, int rows, i
 	return 0;
 }
 
+int gen_test_image(unsigned char *img_ptr, int rows, int cols)
+{
+    cv::Mat src(cv::Size(cols, rows), CV_8UC4);
+    cv::Mat green(cv::Size(cols, rows / 2), CV_8UC4, cv::Scalar(0, 255, 0, 0));
+    cv::Mat red(cv::Size(cols, rows / 2), CV_8UC4, cv::Scalar(255, 0, 0, 0));
+    green.copyTo(src.rowRange(0, rows / 2));
+    red.copyTo(src.rowRange(rows / 2, rows));
+    memcpy(img_ptr, src.data, src.cols * src.rows * src.channels());
+}
+
 int gen_copy_img(unsigned char *src_ptr, unsigned char *dst_ptr, int rows, int cols, int final_rows, int final_cols)
 {
     cv::Mat src(cv::Size(cols, rows), CV_8UC3, src_ptr);
@@ -157,11 +168,13 @@ int gen_copy_img(unsigned char *src_ptr, unsigned char *dst_ptr, int rows, int c
     cv::transpose(src, src_90); // 90度
     cv::flip(src_90, src_270, cv::ROTATE_180); // 270度
     cv::Mat dst(cv::Size(final_cols, final_rows), CV_8UC3);
+    cv::Mat test = cv::imread("3.png");
     // 左右模式拼接
-    cv::resize(src_90, src_90, cv::Size(int(final_cols / 2), final_rows));
-    cv::resize(src_270, src_270, cv::Size(int(final_cols / 2), final_rows));
-    src_270.copyTo(dst.colRange(0, int(final_cols / 2)));
-    src_90.copyTo(dst.colRange(int(final_cols / 2), final_cols));
+    cv::resize(src_90, src_90, cv::Size(int(final_cols / 2), int(final_rows)));
+    cv::resize(src_270, src_270, cv::Size(int(final_cols / 2), int(final_rows)));
+    src_90.copyTo(dst.colRange(0, int(final_cols / 2)));
+    src_270.copyTo(dst.colRange(int(final_cols / 2), final_cols));
+    // cv::line(dst, cv::Point2i(0, int(final_rows / 2)), cv::Point2i(0, int(final_rows / 2)), cv::Scalar(128, 128, 128));
     memcpy(dst_ptr, dst.data, dst.cols * dst.rows * dst.channels());
     return 0;
 }

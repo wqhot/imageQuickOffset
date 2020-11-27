@@ -20,17 +20,18 @@ int main()
     TicToc tic;
     trans_remap(ori_image, new_image, BEFORE_TRANS_ROWS, BEFORE_TRANS_COLS, AFTER_TRANS_ROWS, AFTER_TRANS_COLS);
     tic.toc_print("trans");
-    save_image_data(new_image, AFTER_TRANS_ROWS, AFTER_TRANS_COLS);
+    
     // 生成畸变
     // tran_img(ori_image, new_image);
     // 复制图像
     gen_copy_img(new_image, show_image, AFTER_TRANS_ROWS, AFTER_TRANS_COLS, FINAL_ROWS, FINAL_COLS);
-
+    save_image_data(show_image, FINAL_ROWS, FINAL_COLS);
     
     // show_image_data(show_image, FINAL_ROWS, FINAL_COLS);
     init_framebuffer();
     tic.restart_toc();
     copy_image_to_framebuffer(show_image, FINAL_ROWS, FINAL_COLS);
+    
     // while (true)
     // {
     //     copy_image_to_framebuffer(show_image, FINAL_ROWS, FINAL_COLS);
