@@ -9,43 +9,8 @@
 #include <arpa/inet.h>
 #include <image_process.h>
 #include <tic_toc.h>
-
-//14byte文件头
-typedef struct
-{
-    char cfType[2];  //文件类型，"BM"(0x4D42)
-    long cfSize;     //文件大小（字节）
-    long cfReserved; //保留，值为0
-    long cfoffBits;  //数据区相对于文件头的偏移量（字节）
-} __attribute__((packed)) BITMAPFILEHEADER;
-//__attribute__((packed))的作用是告诉编译器取消结构在编译过程中的优化对齐
-
-//40byte信息头
-typedef struct
-{
-    char ciSize[4];          //BITMAPFILEHEADER所占的字节数
-    long ciWidth;            //宽度
-    long ciHeight;           //高度
-    char ciPlanes[2];        //目标设备的位平面数，值为1
-    int ciBitCount;          //每个像素的位数
-    char ciCompress[4];      //压缩说明
-    char ciSizeImage[4];     //用字节表示的图像大小，该数据必须是4的倍数
-    char ciXPelsPerMeter[4]; //目标设备的水平像素数/米
-    char ciYPelsPerMeter[4]; //目标设备的垂直像素数/米
-    char ciClrUsed[4];       //位图使用调色板的颜色数
-    char ciClrImportant[4];  //指定重要的颜色数，当该域的值等于颜色数时（或者等于0时），表示所有颜色都一样重要
-} __attribute__((packed)) BITMAPINFOHEADER;
-
-typedef struct
-{
-    unsigned short blue;
-    unsigned short green;
-    unsigned short red;
-    unsigned short reserved;
-} __attribute__((packed)) PIXEL; //颜色模式RGB
-
-BITMAPFILEHEADER FileHead;
-BITMAPINFOHEADER InfoHead;
+#include <cp_framebuffer.h>
+#include <thread>
 
 static char *fbp = 0;
 static int xres = 0;
@@ -54,8 +19,6 @@ static int bits_per_pixel = 0;
 static int line_length = 0;
 static long int screensize = 0;
 static int fbfd = 0;
-
-int show_bmp();
 
 int init_framebuffer()
 {
@@ -86,11 +49,10 @@ int init_framebuffer()
     }
 
     printf("fb_info_t: red(%d %d) green(%d %d) blue(%d %d)\n", vinfo.red.offset, vinfo.red.length,
-            vinfo.green.offset, vinfo.green.length, vinfo.blue.offset, vinfo.blue.length);
-    printf("xoffset:%d, yoffset:%d \n",vinfo.xoffset,vinfo.yoffset); 
+           vinfo.green.offset, vinfo.green.length, vinfo.blue.offset, vinfo.blue.length);
+    printf("xoffset:%d, yoffset:%d \n", vinfo.xoffset, vinfo.yoffset);
     printf("%dx%d, %dbpp\n", vinfo.xres, vinfo.yres, vinfo.bits_per_pixel);
     printf("line_length=%d\n", finfo.line_length);
-
 
     xres = vinfo.xres;
     yres = vinfo.yres;
@@ -121,31 +83,54 @@ int close_framebuffer()
 }
 
 int copy_image_to_framebuffer(unsigned char *image, int rows, int cols)
-{  
-    unsigned char *dst_ptr = new unsigned char[rows * cols * bits_per_pixel / 8];
-    TicToc tic;
-    if (bits_per_pixel == 32)
-    {
-        // 增加透明度
-        add_alpha(image, dst_ptr, rows, cols);  
-        // gen_test_image(dst_ptr, rows, cols); 
-        std::cout << "gen_test_image" << std::endl; 
-    }
-    else if (bits_per_pixel == 16)
-    {
-        rgb888_to_rgb565(image, dst_ptr, rows, cols);    
-    }
+{
     int max_cols = cols < xres ? cols : xres;
     int max_rows = rows < yres ? rows : yres;
+    TicToc tic;
     for (int i = 0; i < max_rows; ++i)
     {
         size_t start_pos_screen = (line_length * i) * bits_per_pixel / 8;
         size_t start_pos_image = (cols * i) * bits_per_pixel / 8;
-        memcpy(fbp + start_pos_screen, dst_ptr + start_pos_image, max_cols * bits_per_pixel / 8);
+        memcpy(fbp + start_pos_screen, image + start_pos_image, max_cols * bits_per_pixel / 8);
     }
     // memcpy(fbp, dst_ptr, rows * cols * bits_per_pixel / 8);
-    delete[] dst_ptr;
     tic.toc_print("copy to screen");
 
     return 0;
+}
+
+frameBufferHandle::frameBufferHandle(int get_queue_id) : get_queue_id(get_queue_id)
+{
+    init_framebuffer();
+    _try_to_expire = false;
+    std::thread framebuffer_thread(cp_to_screen, this);
+    framebuffer_thread.detach();
+}
+
+frameBufferHandle::~frameBufferHandle()
+{
+    _try_to_expire = true;
+    close_framebuffer();
+}
+
+int frameBufferHandle::cp_to_screen(frameBufferHandle *handle)
+{
+    while (!handle->_try_to_expire)
+    {
+        basic_item item;
+        if (!g_thread_manager.get_queue(handle->get_queue_id, item))
+        {
+            continue;
+        }
+        std::cout << item.first.size() << std::endl;
+        std::cout << item.second << std::endl;
+        copy_image_to_framebuffer(item.first.data, item.first.rows, item.first.cols);
+    }
+    return 0;
+}
+void frameBufferHandle::get_info(int &screen_rows, int &screen_cols, int &screen_channels)
+{
+    screen_rows = yres;
+    screen_cols = xres;
+    screen_channels = bits_per_pixel / 8;
 }

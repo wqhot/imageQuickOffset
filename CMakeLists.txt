@@ -47,6 +47,7 @@ link_directories(${LINK_DIR})
 target_link_libraries(${PROJECT_NAME}
   PRIVATE
   imageprocess
+  thread_manage
   write2fb
   ${OpenCV_LIBS} 
   ${CMAKE_THREAD_LIBS_INIT}
