@@ -1,11 +1,7 @@
-#include <opencv2/core.hpp>
-#include <opencv2/imgcodecs.hpp>
-#include <opencv2/highgui.hpp>
-#include <opencv2/imgproc.hpp>
-#include <iostream>
-#include <vector>
+
 #include <defines.h>
 #include <gen_c_v2.h>
+#include <image_process.h>
 
 
 static std::vector<cv::Mat> remap_matrix;
@@ -159,6 +155,7 @@ int gen_test_image(unsigned char *img_ptr, int rows, int cols)
     green.copyTo(src.rowRange(0, rows / 2));
     red.copyTo(src.rowRange(rows / 2, rows));
     memcpy(img_ptr, src.data, src.cols * src.rows * src.channels());
+    return 0;
 }
 
 int gen_copy_img(unsigned char *src_ptr, unsigned char *dst_ptr, int rows, int cols, int final_rows, int final_cols)
@@ -177,4 +174,29 @@ int gen_copy_img(unsigned char *src_ptr, unsigned char *dst_ptr, int rows, int c
     // cv::line(dst, cv::Point2i(0, int(final_rows / 2)), cv::Point2i(0, int(final_rows / 2)), cv::Scalar(128, 128, 128));
     memcpy(dst_ptr, dst.data, dst.cols * dst.rows * dst.channels());
     return 0;
+}
+
+
+int videoObtain::load_video_from_file(std::string file_name)
+{
+    m_capture.open(file_name);
+    if (!m_capture.isOpened())
+    {
+        return -1;
+    }
+
+    double rate = m_capture.get(CV_CAP_PROP_FPS);
+    m_frame_delay = 1000 / rate;
+    return 0;
+}
+
+
+videoObtain::videoObtain(std::string file_name, callback_f cb_func)
+{
+    if (!load_video_from_file(file_name))
+    {
+        return;
+    }
+    m_cb_func = cb_func;
+
 }

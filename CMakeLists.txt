@@ -28,6 +28,8 @@ include_directories(
         ${OpenCV_INCLUDE_DIRS}
 )
 
+add_library(thread_manage
+        src/thread_manage.cpp)
 
 add_library(imageprocess
         src/image_process.cpp)
